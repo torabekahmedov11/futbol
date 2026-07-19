@@ -1,4 +1,5 @@
 import feedparser
+import time
 from bs4 import BeautifulSoup
 
 def scrape_telegram_channel(rss_url, last_id):
@@ -22,6 +23,15 @@ def scrape_telegram_channel(rss_url, last_id):
         post_id = entry.get('link', '') or entry.get('id', '')
         if not post_id:
             continue
+            
+        # --------- ESKILIK FILTRI (Faqat ohirgi 48 soatdagilar olinadi) ---------
+        if hasattr(entry, 'published_parsed') and entry.published_parsed:
+            post_time = time.mktime(entry.published_parsed)
+            now_time = time.time()
+            # Agar maqola 48 soatdan (2 kun) ko'p avval chiqqan bo'lsa uni mutlaqo rad etamiz
+            if (now_time - post_time) > (48 * 3600):
+                continue
+        # ------------------------------------------------------------------------
             
         # last_id check (string format)
         # Assuming we just need to avoid adding already fetched. Unfortunately string comparison
