@@ -80,7 +80,7 @@ def send_morning_greeting(bot: telebot.TeleBot):
         return
         
     main_post, batafsil_post = parse_telegraph_response(text)
-    slogan = f"\n\n🚀 Obuna bo'lish esdan chiqmasin: bizda har kuni qaynoq layfxaklar va yangiliklar!\n👉 Kanalimiz: {CHANNEL_LINK}"
+    slogan = f"\n\n⚽️ Asosiy futbol yangiliklari va o'yinlar!\n👉 Obuna bo'ling: @matchtv_livee"
     main_post += slogan
     
     markup = None
@@ -130,7 +130,7 @@ def process_queue_and_post(bot: telebot.TeleBot):
     main_post, batafsil_post = parse_telegraph_response(translated_text)
 
     # Post oxiriga kanal shiori va ssilkasini biriktirish
-    slogan = f"\n\n🚀 Obuna bo'lish esdan chiqmasin: bizda har kuni qaynoq layfxaklar va yangiliklar!\n👉 Kanalimiz: {CHANNEL_LINK}"
+    slogan = f"\n\n⚽️ Asosiy futbol yangiliklari va o'yinlar!\n👉 Obuna bo'ling: @matchtv_livee"
     main_post += slogan
 
     try:
