@@ -179,8 +179,9 @@ def setup_scheduler(bot: telebot.TeleBot):
     # 07:00 dagi xayrli tong AI posti
     scheduler.add_job(send_morning_greeting, trigger="cron", hour=7, minute=0, kwargs={"bot": bot})
     
-    # Odamlar passiv vaqtida, eng ko'p o'qiladigan Prime-Time vaqtlardagi rejali nashr (15 ta)
+    # Tungi jonli futbol o'yinlari va Yevropa chempionatlari (00:00 - 06:00) uchun ham postlarni uzib qo'ymaslik qoidalari
     post_times = [
+        (0, 15), (1, 0), (1, 45), (2, 30), (3, 15), (4, 0), (5, 30),
         (8, 15), (9, 30), (11, 0), (12, 30), 
         (13, 15), (14, 0), (15, 30), (17, 0), 
         (18, 0), (19, 0), (20, 0), (20, 45), 
