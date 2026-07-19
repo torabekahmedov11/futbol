@@ -14,48 +14,34 @@ def fetch_and_queue_posts(bot=None):
     """
     Saytdan yangi postlarni topadi va navbatga qo'shadi.
     """
-    donor = db.get_donor_url()
-    last_id = db.get_last_id()
+    donors = [
+        "http://feeds.bbci.co.uk/sport/football/rss.xml",
+        "https://www.espn.com/espn/rss/soccer/news"
+    ]
     
-    print(f"[{datetime.now()}] Skraping kuting... ({donor})")
-    try:
-        all_posts = scraper.scrape_telegram_channel(donor, last_id)
-    except Exception as e:
-        print(f"Skraping xatosi: {e}")
-        if bot:
-            try:
-                bot.send_message(ADMIN_ID, f"⚠️ **Skraping (Xabar o'g'irlash) bo'limida XATOLIK:**\n\n`{str(e)}`", parse_mode="Markdown")
-            except: pass
-        return
+    print(f"[{datetime.now()}] Skraping kuting... (Ko'p manbali)")
+    all_new_posts = []
     
-    if not all_posts:
-        return
-        
-    new_posts = []
-    start_index = 0
-    if last_id:
-        for idx, post in enumerate(all_posts):
-            if post["id"] == last_id:
-                start_index = idx + 1
-                break
-        else:
-            # Agar last_id topilmasa (masalan yangi sayt), faqat oxirgi 3 tasini olamiz
-            start_index = max(0, len(all_posts) - 3)
+    for donor in donors:
+        try:
+            # last_id ishlatish o'rniga faqat oxirgi 20 ta xabarni tekshiramiz
+            posts = scraper.scrape_telegram_channel(donor, "")
             
-    for i in range(start_index, len(all_posts)):
-        if not db.is_post_seen(all_posts[i]["id"]):
-            new_posts.append(all_posts[i])
-        
-    highest_id = last_id
-    for post in new_posts:
-        highest_id = post["id"] # xronologik
+            # Agar rss katta bo'lsa, faqat oxirgi 15 tasini tekshiramiz
+            if len(posts) > 15:
+                posts = posts[-15:]
+                
+            for post in posts:
+                if not db.is_post_seen(post["id"]):
+                    all_new_posts.append(post)
+        except Exception as e:
+            print(f"Skraping xatosi ({donor}): {e}")
+
+    for post in all_new_posts:
         if post["text"]:
             db.add_queued_post(post)
-            db.set_last_id(highest_id) # Set seen as soon as queued
+            db.set_last_id(post["id"]) # seen_ids ichiga saqlash uchun fuksiya (nomi last_id bo'lsa ham ids ni saqlaydi)
             print(f"Yangi post navbatga tushdi: {post['id']}")
-            
-    if new_posts:
-        db.set_last_id(highest_id)
 
 def parse_telegraph_response(text):
     xabar = text

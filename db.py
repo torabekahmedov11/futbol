@@ -85,9 +85,9 @@ def set_last_id(msg_id):
             data["seen_ids"] = []
         if msg_id and msg_id not in data["seen_ids"]:
             data["seen_ids"].append(msg_id)
-            # 50 tadan oshib ketmasligi uchun
-            if len(data["seen_ids"]) > 50:
-                data["seen_ids"] = data["seen_ids"][-50:]
+            # 200 tadan oshib ketmasligi uchun (ko'p manbalarga moslashdi)
+            if len(data["seen_ids"]) > 200:
+                data["seen_ids"] = data["seen_ids"][-200:]
         _save_unlocked(data)
 
 def is_post_seen(post_id):
