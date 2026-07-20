@@ -69,8 +69,8 @@ def safe_generate_content(prompt):
             return response
         except Exception as e:
             error_str = str(e).lower()
-            if "429" in error_str or "quota" in error_str or "exhausted" in error_str:
-                print(f"[{model_name}] Limit tugadi! Zaxira modelga o'tilmoqda...")
+            if "429" in error_str or "quota" in error_str or "exhausted" in error_str or "404" in error_str or "no longer available" in error_str or "403" in error_str:
+                print(f"[{model_name}] Ulanish rad etildi (Limit yoki 404)! Zaxira modelga o'tilmoqda... Xato: {str(e)[:50]}")
                 _banned_models.append(model_name)
                 _working_model_name = None
                 continue
