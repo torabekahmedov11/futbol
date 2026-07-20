@@ -248,6 +248,23 @@ def process_queue_and_post(bot: telebot.TeleBot):
                 markup.add(InlineKeyboardButton("👉 Batafsil to'liq xabar", url=url))
         
         image_url = post.get('image')
+        
+        # Jonli tarzda bazadagi eski xiralarni to'g'irlash (oldin saqlanib qolgan bo'lsa)
+        if image_url and 'ichef.bbci.co.uk' in image_url:
+            if '/240/' in image_url: image_url = image_url.replace('/240/', '/800/')
+            if '/480/' in image_url: image_url = image_url.replace('/480/', '/800/')
+        
+        # Bazadagi rasm yo'qlarni tekshirib to'ldirish
+        if not image_url:
+            import random
+            image_url = random.choice([
+                "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1518605368461-1e1c25143a41?q=80&w=800&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=800&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1511886929837-354d827a426d?q=80&w=800&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=800&auto=format&fit=crop"
+            ])
+            
         if image_url:
             bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=main_post, parse_mode="HTML", reply_markup=markup)
         else:
