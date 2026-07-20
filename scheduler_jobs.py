@@ -187,6 +187,17 @@ def send_instant_post(bot, text, image_url):
             bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=main_post, parse_mode="HTML")
         else:
             bot.send_message(TARGET_CHANNEL_ID, main_post, parse_mode="HTML")
+    except telebot.apihelper.ApiTelegramException as e:
+        if "parse entities" in str(e).lower():
+            import re
+            clean_post = re.sub(r'<[^>]+>', '', main_post)
+            if image_url:
+                bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=clean_post)
+            else:
+                bot.send_message(TARGET_CHANNEL_ID, clean_post)
+        else:
+            print(f"Tezkor xabar xatosi: {e}")
+            send_admin_error("send_instant_post", e)
     except Exception as e:
         print(f"Tezkor xabar xatosi: {e}")
         send_admin_error("send_instant_post", e)
@@ -216,6 +227,11 @@ def send_morning_greeting(bot: telebot.TeleBot):
             
     try:
         bot.send_message(TARGET_CHANNEL_ID, main_post, parse_mode="HTML", reply_markup=markup if batafsil_post else None)
+    except telebot.apihelper.ApiTelegramException as e:
+        if "parse entities" in str(e).lower():
+            import re
+            clean_post = re.sub(r'<[^>]+>', '', main_post)
+            bot.send_message(TARGET_CHANNEL_ID, clean_post, reply_markup=markup if batafsil_post else None)
     except: pass
 
 def process_queue_and_post(bot: telebot.TeleBot):
@@ -264,10 +280,21 @@ def process_queue_and_post(bot: telebot.TeleBot):
                 "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=800&auto=format&fit=crop"
             ])
             
-        if image_url:
-            bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=main_post, parse_mode="HTML", reply_markup=markup)
-        else:
-            bot.send_message(TARGET_CHANNEL_ID, main_post, parse_mode="HTML", reply_markup=markup)
+        try:
+            if image_url:
+                bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=main_post, parse_mode="HTML", reply_markup=markup)
+            else:
+                bot.send_message(TARGET_CHANNEL_ID, main_post, parse_mode="HTML", reply_markup=markup)
+        except telebot.apihelper.ApiTelegramException as e:
+            if "parse entities" in str(e).lower():
+                import re
+                clean_post = re.sub(r'<[^>]+>', '', main_post)
+                if image_url:
+                    bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=clean_post, reply_markup=markup)
+                else:
+                    bot.send_message(TARGET_CHANNEL_ID, clean_post, reply_markup=markup)
+            else:
+                raise e
             
         print(f"✅ RSS POST ketti (Qoldi: {db.get_queued_count()})")
     except Exception as e:
