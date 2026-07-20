@@ -19,6 +19,7 @@ def get_admin_menu():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row(KeyboardButton("📊 Holat"), KeyboardButton("🛠 Sozlamalar"))
     markup.row(KeyboardButton("🚀 Majburiy yig'ish"), KeyboardButton("📨 Majburiy post"))
+    markup.row(KeyboardButton("⚽️ API test (Anons)"))
     return markup
 
 def notify_admin(context, error):
@@ -99,6 +100,19 @@ def cmd_force_post(message):
         bot.send_message(message.chat.id, "Urinish tugadi. Kanalni tekshiring (Agar tushmagan bo'lsa limit to'lgan bo'lishi mumkin).")
     except Exception as e:
         notify_admin("Force post", e)
+
+@bot.message_handler(func=lambda message: message.text == "⚽️ API test (Anons)" or message.text.startswith('/test_api'))
+def cmd_test_api(message):
+    if not is_admin(message.from_user.id):
+        return
+    bot.send_message(message.chat.id, "API-Football orqali bugungi o'yinlar qidirilmoqda va post qilinmoqda...")
+    try:
+        from scheduler_jobs import queue_morning_fixtures
+        queue_morning_fixtures(bot, force=True)
+        bot.send_message(message.chat.id, "API post urunishi tugadi. Agar bugun o'yinlar ro'yxati (top ligalarda) bo'lsa, kanalga Anons uzatildi.")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Xato: {e}")
+        notify_admin("API test", e)
 
 @bot.message_handler(func=lambda message: message.text == "🛠 Sozlamalar" or message.text.startswith('/settings'))
 def cmd_settings(message):

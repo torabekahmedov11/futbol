@@ -43,7 +43,7 @@ def fetch_rss_news():
             db.add_queued_post(p)
             db.set_last_id(p["id"])
 
-def queue_morning_fixtures(bot: telebot.TeleBot):
+def queue_morning_fixtures(bot: telebot.TeleBot, force=False):
     """Ertalabki o'yinlar taqvimi va vaqtlarini xotiraga yuklash va anons berish"""
     fixtures = api_football.get_fixtures_for_date()
     if not fixtures: return
@@ -67,11 +67,10 @@ def queue_morning_fixtures(bot: telebot.TeleBot):
         "content": text_data
     })
     
-    if not db.is_fixture_notified("anons_" + datetime.now().strftime('%Y%m%d')):
+    if force or not db.is_fixture_notified("anons_" + datetime.now().strftime('%Y%m%d')):
         # Sun'iy intellektga yuboramiz va to'g'ridan to'g'ri kanalga
         translated = ai_translator.translate_and_spice_up(post_json)
         # logotipi bilan send_instant_post() dan foydalanamiz
-        # bu yerda queue kerak emas, anons ertalab kutmasdan chiqishi lozim.
         db.add_notified_fixture("anons_" + datetime.now().strftime('%Y%m%d'))
         send_instant_post(bot, translated, fixtures[0]['league']['logo'])
 
