@@ -10,7 +10,7 @@ _db_lock = threading.Lock()
 
 _db_id = "fbdb_" + hashlib.md5(BOT_TOKEN.encode()).hexdigest()[:12]
 _db_secret = hashlib.md5((BOT_TOKEN + "secret").encode()).hexdigest()[:15]
-_db_read_url = f"https://rentry.co/{_db_id}/raw"
+_db_read_url = f"https://rentry.co/{_db_id}"
 
 def init_db():
     global _db_lock
@@ -20,12 +20,21 @@ def init_db():
             print("Lokal baza yo'q. Cloud Rentry dan sinab ko'rilmoqda...")
             try:
                 r = requests.get(_db_read_url, timeout=10)
-                if r.status_code == 200 and r.text.strip().startswith('{'):
-                    data = r.json()
-                    with open(DB_FILE, 'w', encoding='utf-8') as f:
-                        json.dump(data, f, ensure_ascii=False, indent=4)
-                    print("✅ Onlayn xotiradan (Cloud) Database muvaffaqiyatli TIKLANDI!")
-                    return
+                if r.status_code == 200:
+                    try:
+                        from bs4 import BeautifulSoup
+                        soup = BeautifulSoup(r.text, 'html.parser')
+                        article = soup.find('article')
+                        if article:
+                            raw_text = article.get_text(strip=True)
+                            if raw_text.startswith('{'):
+                                data = json.loads(raw_text)
+                                with open(DB_FILE, 'w', encoding='utf-8') as f:
+                                    json.dump(data, f, ensure_ascii=False, indent=4)
+                                print("✅ Onlayn xotiradan (Cloud) Database muvaffaqiyatli TIKLANDI!")
+                                return
+                    except Exception as parse_e:
+                        print(f"Parse error: {parse_e}")
             except Exception as e:
                 print(f"Cloud dan tiklashda xato yoki xotira yo'q: {e}")
                 

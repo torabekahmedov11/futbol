@@ -143,5 +143,11 @@ if __name__ == "__main__":
     scheduler.start()
     print("Taymer (Scheduler) ishga tushdi!")
     
+    try:
+        if ADMIN_ID:
+            bot.send_message(ADMIN_ID, "🚀 Bot serverda qayta ishga tushdi va bulutli xotirani faollashtirdi!", reply_markup=get_admin_menu())
+    except Exception as e:
+        print(f"Boshlang'ich xabar xatosi: {e}")
+    
     print("Bot polling boshlandi...")
     bot.infinity_polling()
