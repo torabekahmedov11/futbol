@@ -56,7 +56,7 @@ def get_working_model():
 
 def safe_generate_content(prompt):
     global _working_model_name, _banned_models
-    max_retries = 4
+    max_retries = 15
     
     for _ in range(max_retries):
         model_name = get_working_model()
