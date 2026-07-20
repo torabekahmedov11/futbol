@@ -194,14 +194,13 @@ def send_instant_post(bot, text, image_url):
 def parse_telegraph_response(text):
     xabar = text
     batafsil = ""
-    if "[XABAR]" in text and "[BATAFSIL]" in text:
-        parts = text.split("[BATAFSIL]")
-        xabar = parts[0].replace("[XABAR]", "").strip()
-        batafsil = parts[1].strip()
-    elif "[BATAFSIL]" in text:
+    if "[BATAFSIL]" in text:
         parts = text.split("[BATAFSIL]")
         xabar = parts[0].strip()
         batafsil = parts[1].strip()
+    
+    # Qolgan [XABAR] larni tozalab tashlash (ayniqsa qisqa postlarda yopishib qoladi)
+    xabar = xabar.replace("[XABAR]", "").strip()
     return xabar, batafsil
 
 def send_morning_greeting(bot: telebot.TeleBot):
