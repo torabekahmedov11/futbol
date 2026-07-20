@@ -8,19 +8,19 @@ from config import BOT_TOKEN
 DB_FILE = "db.json"
 _db_lock = threading.Lock()
 
-# Xavfsiz, parolli cloud nomi yasaymiz.
-_kvdb_bucket = "avto_" + hashlib.md5(BOT_TOKEN.encode()).hexdigest()[:15]
-_kvdb_url = f"https://kvdb.io/bucket/{_kvdb_bucket}/db"
+_db_id = "fbdb_" + hashlib.md5(BOT_TOKEN.encode()).hexdigest()[:12]
+_db_secret = hashlib.md5((BOT_TOKEN + "secret").encode()).hexdigest()[:15]
+_db_read_url = f"https://rentry.co/{_db_id}/raw"
 
 def init_db():
     global _db_lock
     _db_lock = threading.Lock()
     with _db_lock:
         if not os.path.exists(DB_FILE):
-            print("Lokal baza yo'q. Cloud KVDB dan sinab ko'rilmoqda...")
+            print("Lokal baza yo'q. Cloud Rentry dan sinab ko'rilmoqda...")
             try:
-                r = requests.get(_kvdb_url, timeout=5)
-                if r.status_code == 200 and r.json():
+                r = requests.get(_db_read_url, timeout=10)
+                if r.status_code == 200 and r.text.strip().startswith('{'):
                     data = r.json()
                     with open(DB_FILE, 'w', encoding='utf-8') as f:
                         json.dump(data, f, ensure_ascii=False, indent=4)
@@ -30,13 +30,23 @@ def init_db():
                 print(f"Cloud dan tiklashda xato yoki xotira yo'q: {e}")
                 
             default_data = {
+                "donor_url": "http://feeds.bbci.co.uk/sport/football/rss.xml",
+                "last_scraped_id": "",
+                "seen_ids": [],
                 "notified_fixture_ids": [],
-                "queued_posts": []
+                "queued_posts": [],
+                "live_match_states": {}
             }
             # fayl yo'q bo'lsa _save_unlocked o'zi yozib cloudga 1-marta commit beradi
             try:
                 with open(DB_FILE, 'w', encoding='utf-8') as f:
                     json.dump(default_data, f, ensure_ascii=False, indent=4)
+                
+                requests.post("https://rentry.co/api/new", data={
+                    "url": _db_id,
+                    "edit_code": _db_secret,
+                    "text": json.dumps(default_data)
+                }, timeout=10)
             except Exception as e:
                 print(e)
 
@@ -59,7 +69,15 @@ def _save_unlocked(data):
             json.dump(data, f, ensure_ascii=False, indent=4)
         
         def _upload():
-            try: requests.post(_kvdb_url, json=data, timeout=5)
+            try: 
+                text_data = json.dumps(data, ensure_ascii=False)
+                res = requests.post(f"https://rentry.co/api/edit/{_db_id}", data={
+                    "edit_code": _db_secret,
+                    "text": text_data
+                }, timeout=10)
+                # Agar mavjud bo'lmasa, yaratish
+                if res.status_code != 200 or ("not found" in res.text.lower()):
+                    requests.post("https://rentry.co/api/new", data={"url": _db_id, "edit_code": _db_secret, "text": text_data}, timeout=10)
             except: pass
         threading.Thread(target=_upload).start()
     except Exception as e:

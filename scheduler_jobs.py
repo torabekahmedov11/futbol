@@ -8,10 +8,17 @@ import json
 import time
 from telegraph_api import create_telegraph_page
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import TARGET_CHANNEL_ID, CHANNEL_LINK, ADMIN_ID
+from config import TARGET_CHANNEL_ID, CHANNEL_LINK, ADMIN_ID, BOT_TOKEN
 from datetime import datetime
+import requests
 
 scheduler = BackgroundScheduler(timezone='Asia/Tashkent')
+
+def send_admin_error(context, e):
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        requests.post(url, data={"chat_id": ADMIN_ID, "text": f"⚠️ JADVAL XATOSI!\nJoy: {context}\nXato: {str(e)[:500]}"}, timeout=5)
+    except: pass
 
 def fetch_rss_news():
     """RSS orqali asosiy (fon) yangiliklarni yig'ish (Bema'lo bepul limit)"""
@@ -29,6 +36,7 @@ def fetch_rss_news():
                     all_new_posts.append(p)
         except Exception as e:
             print(f"Skraping xatosi: {e}")
+            send_admin_error("fetch_rss_news (Skraping)", e)
 
     for p in all_new_posts:
         if p.get("text"):
@@ -148,6 +156,7 @@ def send_instant_post(bot, text, image_url):
             bot.send_message(TARGET_CHANNEL_ID, main_post, parse_mode="HTML")
     except Exception as e:
         print(f"Tezkor xabar xatosi: {e}")
+        send_admin_error("send_instant_post", e)
 
 def parse_telegraph_response(text):
     xabar = text
@@ -215,6 +224,7 @@ def process_queue_and_post(bot: telebot.TeleBot):
     except Exception as e:
         post['retries'] = post.get('retries', 0) + 1
         if post['retries'] <= 3: db.requeue_post(post)
+        send_admin_error("process_queue_and_post", e)
 
 def setup_scheduler(bot: telebot.TeleBot):
     # Har 10 minutda sekkin fon xabarlarini bepul yig'ish (RSS)

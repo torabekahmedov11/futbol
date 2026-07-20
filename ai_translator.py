@@ -134,3 +134,16 @@ def generate_morning_lifehack():
     except Exception as e:
         print(f"Ertalabki layfxak xatosi: {e}")
         return None
+
+def check_ai_status():
+    if not GEMINI_API_KEY:
+        return "XATO: API kalit kiritilmagan!"
+    try:
+        model = genai.GenerativeModel(get_working_model())
+        response = model.generate_content("Just say 'OK'")
+        if "OK" in response.text.upper():
+            return "NORMAL (Uzluksiz ishlamoqda)"
+        else:
+            return "OGOHLANTIRISH (Noto'g'ri javob)"
+    except Exception as e:
+        return f"XATO (Limitsiz yoki tarmoq): {str(e)[:50]}"

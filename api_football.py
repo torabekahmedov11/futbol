@@ -113,3 +113,22 @@ def get_standings(league_id=39, season=2024):
     except Exception as e:
         print(f"Standings formati xato: {e}")
     return None
+
+def get_api_status():
+    """API-Football akkaunt holati va limitlarini xabar beradi"""
+    url = f"{API_URL}/status"
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        data = response.json()
+        if 'response' in data and 'account' in data['response'] and 'requests' in data['response']['subscription']:
+            # Wait, API structure might differ. Better robust dict getting
+            pass 
+        # v3 da response -> subscription -> active, requests -> current, limit_day
+        if 'response' in data and data.get('response'):
+            subs = data['response'].get('subscription', {})
+            req = int(data['response'].get('requests', {}).get('current', 0))
+            limit_day = int(data['response'].get('requests', {}).get('limit_day', 100))
+            return {"limit_day": limit_day, "current": req, "status": "OK"}
+    except Exception as e:
+        print(f"Status xato: {e}")
+    return {"status": "ERROR"}

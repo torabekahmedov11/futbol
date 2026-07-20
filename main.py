@@ -1,8 +1,12 @@
 import telebot
 import db
 import threading
+import json
 from config import BOT_TOKEN, ADMIN_ID, TARGET_CHANNEL_ID
-from scheduler_jobs import setup_scheduler, scheduler, fetch_and_queue_posts, process_queue_and_post
+from scheduler_jobs import setup_scheduler, scheduler, fetch_rss_news, process_queue_and_post
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
+import api_football
+import ai_translator
 
 db.init_db()
 
@@ -10,6 +14,18 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 def is_admin(user_id):
     return str(user_id) == str(ADMIN_ID)
+
+def get_admin_menu():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.row(KeyboardButton("📊 Holat"), KeyboardButton("🛠 Sozlamalar"))
+    markup.row(KeyboardButton("🚀 Majburiy yig'ish"), KeyboardButton("📨 Majburiy post"))
+    return markup
+
+def notify_admin(context, error):
+    try:
+        if ADMIN_ID:
+            bot.send_message(ADMIN_ID, f"⚠️ XATOLIK:\n📍 Joy: {context}\n📄 Xato: `{error}`", parse_mode="Markdown")
+    except: pass
 
 @bot.message_handler(commands=['start'])
 def cmd_start(message):
@@ -21,15 +37,11 @@ def cmd_start(message):
     text = (
         "👋 Assalomu alaykum, Admin!\n\n"
         "Bu bot o'zbek tiliga xorijiy kanallardan postlarni 'o'g'irlab', "
-        "Gemini AI yordamida 'virusli' formatda kanalingizga joylab beradi.\n\n"
-        "🛠 /settings - Donor kanalni o'zgartirish\n"
-        "📊 /status - Hozirgi holatni ko'rish\n"
-        "🚀 /force_fetch - Hozirning o'zida postlarni yig'ish\n"
-        "📨 /force_post - Hozirning o'zida bitta post chiqarib ko'rish"
+        "Gemini AI yordamida 'virusli' formatda kanalingizga joylab beradi."
     )
-    bot.send_message(message.chat.id, text)
+    bot.send_message(message.chat.id, text, reply_markup=get_admin_menu())
 
-@bot.message_handler(commands=['status'])
+@bot.message_handler(func=lambda message: message.text == "📊 Holat" or message.text.startswith('/status'))
 def cmd_status(message):
     if not is_admin(message.from_user.id):
         return
@@ -37,35 +49,58 @@ def cmd_status(message):
     q_count = db.get_queued_count()
     last_id = db.get_last_id()
     
+    bot.send_message(message.chat.id, "Holat hisoblanmoqda, kutib turing...")
+    
+    api_stat = api_football.get_api_status()
+    ai_stat = ai_translator.check_ai_status()
+    
+    limit_info = ""
+    if api_stat["status"] == "OK":
+        lim = api_stat["limit_day"]
+        curr = api_stat["current"]
+        qoldiq = lim - curr
+        xulosa = "Yetmaydi (API kalit almashtiring)" if qoldiq < 15 else "Bugunga yetadi"
+        limit_info = f"⚽️ API-Football: {curr}/{lim} band (Qoldiq: {qoldiq}), {xulosa}"
+    else:
+        limit_info = "⚽️ API-Football: Ulanishda xato!"
+
     text = (
         "📈 **Bot Holati:**\n\n"
-        f"🎯 RSS Manba (Sayt): {donor}\n"
+        f"🎯 RSS Manba: {donor}\n"
         f"📦 Navbatdagi postlar soni: {q_count} ta\n"
-        f"🔍 Oxirgi o'qilgan xabar URL: {last_id}"
+        f"🔍 Oxirgi o'qilgan maxsus xabar: {last_id if last_id else 'Hali yoq'}\n\n"
+        f"🤖 AI Holati: {ai_stat}\n"
+        f"{limit_info}"
     )
-    bot.send_message(message.chat.id, text, parse_mode="Markdown")
+    bot.send_message(message.chat.id, text, parse_mode="Markdown", disable_web_page_preview=True)
 
-@bot.message_handler(commands=['force_fetch'])
+@bot.message_handler(func=lambda message: message.text == "🚀 Majburiy yig'ish" or message.text.startswith('/force_fetch'))
 def cmd_force_fetch(message):
     if not is_admin(message.from_user.id):
         return
     bot.send_message(message.chat.id, "Sikraping ishga tushirildi... Kutib turing.")
-    fetch_and_queue_posts()
-    bot.send_message(message.chat.id, f"Skraping tugadi! Navbatda {db.get_queued_count()} ta post yig'ildi.")
+    try:
+        fetch_rss_news()
+        bot.send_message(message.chat.id, f"Skraping tugadi! Navbatda {db.get_queued_count()} ta post yig'ildi.")
+    except Exception as e:
+        notify_admin("Force fetch", e)
 
-@bot.message_handler(commands=['force_post'])
+@bot.message_handler(func=lambda message: message.text == "📨 Majburiy post" or message.text.startswith('/force_post'))
 def cmd_force_post(message):
     if not is_admin(message.from_user.id):
         return
     if db.get_queued_count() == 0:
-        bot.send_message(message.chat.id, "Bazada post yo'q. Oldin /force_fetch qilib postlarni yig'ing.")
+        bot.send_message(message.chat.id, "Bazada post yo'q. Oldin '🚀 Majburiy yig'ish' qilib postlarni yig'ing.")
         return
     
     bot.send_message(message.chat.id, "Tarjima qilinmoqda va kanalga jo'natilmoqda...")
-    process_queue_and_post(bot)
-    bot.send_message(message.chat.id, "Urinish tugadi. Kanalni tekshiring.")
+    try:
+        process_queue_and_post(bot)
+        bot.send_message(message.chat.id, "Urinish tugadi. Kanalni tekshiring (Agar tushmagan bo'lsa limit to'lgan bo'lishi mumkin).")
+    except Exception as e:
+        notify_admin("Force post", e)
 
-@bot.message_handler(commands=['settings'])
+@bot.message_handler(func=lambda message: message.text == "🛠 Sozlamalar" or message.text.startswith('/settings'))
 def cmd_settings(message):
     if not is_admin(message.from_user.id):
         return
@@ -74,8 +109,8 @@ def cmd_settings(message):
         f"Hozirgi RSS Manba (Sayt): {donor}\n\n"
         "Yangi RSS manbalarini to'liq havolasi (URL) bilan jo'nating:\n"
         "Misollar:\n"
-        "- https://lifehacker.com/rss\n"
-        "- https://www.reddit.com/r/BeAmazed/.rss\n"
+        "- http://feeds.bbci.co.uk/sport/football/rss.xml\n"
+        "- https://www.espn.com/espn/rss/soccer/news\n"
         "(Bekor qilish uchun /cancel)"
     )
     msg = bot.send_message(message.chat.id, text)
