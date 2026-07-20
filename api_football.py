@@ -29,9 +29,13 @@ def get_fixtures_for_date(date_str=None):
     date_str: 'YYYY-MM-DD'. Agar berilmasa, bugungi sana (Tashkent vaqti) olinadi.
     """
     if not date_str:
-        # Tashkent vaqti bo'yicha hisoblaymiz (+5 UTC)
+        # Tashkent vaqti bo'yicha aniq hisoblaymiz (+5 UTC)
+        # UTC vaqtini olamiz
+        utc_now = datetime.datetime.now(datetime.timezone.utc)
         tz_tashkent = datetime.timezone(datetime.timedelta(hours=5))
-        date_str = datetime.datetime.now(tz_tashkent).strftime('%Y-%m-%d')
+        local_now = utc_now.astimezone(tz_tashkent)
+        date_str = local_now.strftime('%Y-%m-%d')
+        print(f"Tanlangan sana (Anons uchun): {date_str}")
         
     url = f"{API_URL}/fixtures"
     params = {"date": date_str, "timezone": "Asia/Tashkent"}
@@ -55,6 +59,37 @@ def get_fixtures_for_date(date_str=None):
 
     except Exception as e:
         print(f"API-Football bilan bog'lanishda xato: {e}")
+        return []
+
+def get_yesterday_results():
+    """
+    Kechagi kundagi barcha (faqa TO'LIG'I YAKUNLANGAN) top ligalar o'yinlarini natijalari qaytaradi.
+    """
+    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    tz_tashkent = datetime.timezone(datetime.timedelta(hours=5))
+    yesterday = (utc_now.astimezone(tz_tashkent) - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+    print(f"Tekshirilayotgan kechagi sana: {yesterday}")
+    
+    url = f"{API_URL}/fixtures"
+    params = {"date": yesterday, "timezone": "Asia/Tashkent"}
+    try:
+        response = requests.get(url, headers=HEADERS, params=params, timeout=10)
+        data = response.json()
+        if not data or 'response' not in data:
+            return []
+            
+        all_fixtures = data['response']
+        # Faqat top ligalarni va yakunlangan (FT, AET, PEN) larni filtrlaymiz
+        finished_statuses = ['FT', 'AET', 'PEN']
+        top_fixtures = [
+            fix for fix in all_fixtures 
+            if fix['league']['id'] in TOP_LEAGUES and fix['fixture']['status']['short'] in finished_statuses
+        ]
+        
+        top_fixtures.sort(key=lambda x: x['league']['id'])
+        return top_fixtures
+    except Exception as e:
+        print(f"Kechagi natijalarni olishda xato: {e}")
         return []
 
 def get_fixture_details(fixture_id):

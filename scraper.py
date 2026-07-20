@@ -1,5 +1,6 @@
 import feedparser
 import time
+import random
 from bs4 import BeautifulSoup
 
 def scrape_telegram_channel(rss_url, last_id):
@@ -48,6 +49,23 @@ def scrape_telegram_channel(rss_url, last_id):
                     if 'image' in getattr(enc, 'type', '') or 'image' in enc.get('type', ''):
                         image_url = enc.get('href')
                         break
+                        
+        # Rasmlarni original kattaligida olish
+        if image_url and 'ichef.bbci.co.uk' in image_url and '/240/' in image_url:
+            image_url = image_url.replace('/240/', '/800/')
+        elif image_url and 'ichef.bbci.co.uk' in image_url and '/480/' in image_url:
+            image_url = image_url.replace('/480/', '/800/')
+            
+        # Bo'sh qolsa zaxira rasm qo'yamiz (Katta va sifatli)
+        fallbacks = [
+            "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop", # Stadion va koptok
+            "https://images.unsplash.com/photo-1518605368461-1e1c25143a41?q=80&w=800&auto=format&fit=crop", # O'yin maydoni
+            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=800&auto=format&fit=crop", # Tomoshabinlar
+            "https://images.unsplash.com/photo-1511886929837-354d827a426d?q=80&w=800&auto=format&fit=crop", # Koptok va darvoza
+            "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=800&auto=format&fit=crop" # Maydon chimi
+        ]
+        if not image_url:
+            image_url = random.choice(fallbacks)
         
         clean_summary = soup.get_text('\n', strip=True)
         if clean_summary and clean_summary != entry.get('title', ''):

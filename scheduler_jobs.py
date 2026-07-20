@@ -70,9 +70,43 @@ def queue_morning_fixtures(bot: telebot.TeleBot, force=False):
     if force or not db.is_fixture_notified("anons_" + datetime.now().strftime('%Y%m%d')):
         # Sun'iy intellektga yuboramiz va to'g'ridan to'g'ri kanalga
         translated = ai_translator.translate_and_spice_up(post_json)
-        # logotipi bilan send_instant_post() dan foydalanamiz
         db.add_notified_fixture("anons_" + datetime.now().strftime('%Y%m%d'))
-        send_instant_post(bot, translated, fixtures[0]['league']['logo'])
+        import random
+        bg = random.choice([
+            "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1518605368461-1e1c25143a41?q=80&w=800&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=800&auto=format&fit=crop"
+        ])
+        send_instant_post(bot, translated, bg)
+
+def queue_yesterday_results(bot: telebot.TeleBot):
+    """Kecha bo'lib o'tgan o'yinlar haqida yakuniy hisobot"""
+    results = api_football.get_yesterday_results()
+    if not results: return
+    
+    text_data = ""
+    for r in results:
+        home = r['teams']['home']['name']
+        away = r['teams']['away']['name']
+        score = f"{r['goals']['home']} - {r['goals']['away']}"
+        league = r['league']['name']
+        text_data += f"🏆 {league}: {home} {score} {away}\n"
+        
+    post_json = json.dumps({
+        "type": "RESULT",
+        "title": "🔥 Kechagi kunning qaynoq natijalari!",
+        "content": text_data
+    })
+    
+    if not db.is_fixture_notified("yesterday_" + datetime.now().strftime('%Y%m%d')):
+        translated = ai_translator.translate_and_spice_up(post_json)
+        db.add_notified_fixture("yesterday_" + datetime.now().strftime('%Y%m%d'))
+        import random
+        bg = random.choice([
+            "https://images.unsplash.com/photo-1511886929837-354d827a426d?q=80&w=800&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=800&auto=format&fit=crop"
+        ])
+        send_instant_post(bot, translated, bg)
 
 def check_live_matches(bot: telebot.TeleBot):
     """
@@ -235,11 +269,14 @@ def setup_scheduler(bot: telebot.TeleBot):
     # Anons qismi
     scheduler.add_job(queue_morning_fixtures, trigger="cron", hour=8, minute=0, kwargs={"bot": bot})
     
+    # Kechagi natijalar
+    scheduler.add_job(queue_yesterday_results, trigger="cron", hour=7, minute=30, kwargs={"bot": bot})
+    
     # Ertalabki greeting
     scheduler.add_job(send_morning_greeting, trigger="cron", hour=7, minute=0, kwargs={"bot": bot})
     
-    # Process old queue (Sekin tsikl uchun)
-    scheduler.add_job(process_queue_and_post, trigger="interval", minutes=65, jitter=1500, kwargs={"bot": bot})
+    # Process old queue (Aynan kuniga 15 ta atrofida chiqishi uchun post kuttirish 85 minut)
+    scheduler.add_job(process_queue_and_post, trigger="interval", minutes=85, jitter=1500, kwargs={"bot": bot})
     
     # Restartdan so'ng 1 ta check qilib qo'yish
     print("Gibrid (RSS + API) tizimi o'rnatildi!")
