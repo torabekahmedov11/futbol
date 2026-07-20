@@ -25,7 +25,7 @@ def get_admin_menu():
 def notify_admin(context, error):
     try:
         if ADMIN_ID:
-            bot.send_message(ADMIN_ID, f"⚠️ XATOLIK:\n📍 Joy: {context}\n📄 Xato: `{error}`", parse_mode="Markdown")
+            bot.send_message(ADMIN_ID, f"⚠️ XATOLIK:\n📍 Joy: {context}\n📄 Xato: {error}")
     except: pass
 
 @bot.message_handler(commands=['start'])
@@ -73,7 +73,7 @@ def cmd_status(message):
         f"🤖 AI Holati: {ai_stat}\n"
         f"{limit_info}"
     )
-    bot.send_message(message.chat.id, text, parse_mode="Markdown", disable_web_page_preview=True)
+    bot.send_message(message.chat.id, text, disable_web_page_preview=True)
 
 @bot.message_handler(func=lambda message: message.text == "🚀 Majburiy yig'ish" or message.text.startswith('/force_fetch'))
 def cmd_force_fetch(message):
