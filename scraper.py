@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 def scrape_telegram_channel(rss_url, last_id):
     """
     Saytning RSS Feed zanjiridan postlarni o'qiydi.
-    (Funksiya formati eski nomida qoldirildi, barcha qismlar ishlashi uchun)
     """
     try:
         feed = feedparser.parse(rss_url)
@@ -14,9 +13,6 @@ def scrape_telegram_channel(rss_url, last_id):
         return []
 
     new_posts = []
-    
-    # Eng yangi postlarni eng oxiridan ko'rib chiqish kerak zanjir odatda reverse-chrono bo'ladi
-    # Bizga esa xronologik tarzda kerak.
     entries = reversed(feed.entries)
     
     for entry in entries:
@@ -24,39 +20,25 @@ def scrape_telegram_channel(rss_url, last_id):
         if not post_id:
             continue
             
-        # --------- ESKILIK FILTRI (Faqat ohirgi 48 soatdagilar olinadi) ---------
         if hasattr(entry, 'published_parsed') and entry.published_parsed:
             post_time = time.mktime(entry.published_parsed)
             now_time = time.time()
-            # Agar maqola 48 soatdan (2 kun) ko'p avval chiqqan bo'lsa uni mutlaqo rad etamiz
-            if (now_time - post_time) > (48 * 3600):
+            if (now_time - post_time) > (24 * 3600):
                 continue
-        # ------------------------------------------------------------------------
-            
-        # last_id check (string format)
-        # Assuming we just need to avoid adding already fetched. Unfortunately string comparison
-        # is tricky, so we will handle "seen" IDs differently. 
-        # But for simplification: if we hit the last_id while iterating (from oldest to newest), 
-        # we consider everything after it as new.
         
-        # We will retrieve title + summary text
         text = entry.get('title', '') + "\n\n"
-        
-        # Summary ichida HTML bo'lishi mumkin, ba'zan esa 'content' ichida bo'ladi
         content_html = entry.get('summary', '') or entry.get('description', '')
         if 'content' in entry and len(entry.content) > 0:
             content_html = entry.content[0].value
             
         soup = BeautifulSoup(content_html, 'html.parser')
         
-        # Rasmni topish (agar bo'lsa)
         image_url = None
         img_tag = soup.find('img')
         if img_tag and img_tag.get('src'):
             image_url = img_tag.get('src')
             
         if not image_url:
-            # Ba'zi RSS larda rasm (media) atributida, enclosure'da bo'lishi mumkin
             if 'media_content' in entry and len(entry.media_content) > 0:
                 image_url = entry.media_content[0].get('url')
             elif 'media_thumbnail' in entry and len(entry.media_thumbnail) > 0:
@@ -67,12 +49,10 @@ def scrape_telegram_channel(rss_url, last_id):
                         image_url = enc.get('href')
                         break
         
-        # Matnni tozalash (yangi qatorlarni saqlab qolish yaxshi)
         clean_summary = soup.get_text('\n', strip=True)
         if clean_summary and clean_summary != entry.get('title', ''):
             text += clean_summary
             
-        # ---------------- REKLAMA FILTRI ----------------
         title_lower = entry.get('title', '').lower()
         link_lower = post_id.lower()
         
@@ -84,15 +64,14 @@ def scrape_telegram_channel(rss_url, last_id):
                 break
                 
         if is_ad:
-            print(f"Reklama po'sti o'tkazib yuborildi: {title_lower}")
             continue
-        # ------------------------------------------------
             
         new_posts.append({
             "id": post_id,
             "text": text,
             "image": image_url,
-            "video": None # RSS dan video olish sal qiyinroq, odatda rasm bo'ladi
+            "video": None,
+            "type": "news"
         })
         
     return new_posts

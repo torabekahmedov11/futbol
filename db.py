@@ -30,9 +30,7 @@ def init_db():
                 print(f"Cloud dan tiklashda xato yoki xotira yo'q: {e}")
                 
             default_data = {
-                "donor_url": "http://feeds.bbci.co.uk/sport/football/rss.xml",
-                "last_scraped_id": "",
-                "seen_ids": [],
+                "notified_fixture_ids": [],
                 "queued_posts": []
             }
             # fayl yo'q bo'lsa _save_unlocked o'zi yozib cloudga 1-marta commit beradi
@@ -44,7 +42,14 @@ def init_db():
 
 def _load_unlocked():
     if not os.path.exists(DB_FILE):
-        return {"donor_url": "http://feeds.bbci.co.uk/sport/football/rss.xml", "last_scraped_id": "", "seen_ids": [], "queued_posts": []}
+        return {
+            "donor_url": "http://feeds.bbci.co.uk/sport/football/rss.xml",
+            "last_scraped_id": "",
+            "seen_ids": [],
+            "notified_fixture_ids": [], 
+            "queued_posts": [],
+            "live_match_states": {}
+        }
     with open(DB_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -53,7 +58,6 @@ def _save_unlocked(data):
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
         
-        # Async bulutga commit qilish
         def _upload():
             try: requests.post(_kvdb_url, json=data, timeout=5)
             except: pass
@@ -61,6 +65,7 @@ def _save_unlocked(data):
     except Exception as e:
         print(f"Xato (saqlash): {e}")
 
+# ---- RSS ----
 def get_donor_url():
     with _db_lock:
         return _load_unlocked().get("donor_url", "http://feeds.bbci.co.uk/sport/football/rss.xml")
@@ -69,8 +74,7 @@ def set_donor_url(url):
     with _db_lock:
         data = _load_unlocked()
         data["donor_url"] = url
-        data["last_scraped_id"] = ""  # yangi saytdan yangi postlarni eslab qolish uchun
-        data["queued_posts"] = []     # eski navbatni tozalaymiz
+        data["last_scraped_id"] = ""
         _save_unlocked(data)
 
 def get_last_id():
@@ -85,7 +89,6 @@ def set_last_id(msg_id):
             data["seen_ids"] = []
         if msg_id and msg_id not in data["seen_ids"]:
             data["seen_ids"].append(msg_id)
-            # 200 tadan oshib ketmasligi uchun (ko'p manbalarga moslashdi)
             if len(data["seen_ids"]) > 200:
                 data["seen_ids"] = data["seen_ids"][-200:]
         _save_unlocked(data)
@@ -95,29 +98,81 @@ def is_post_seen(post_id):
         data = _load_unlocked()
         return post_id in data.get("seen_ids", [])
 
+# ---- API FOOTBALL ----
+def add_notified_fixture(fixture_id):
+    with _db_lock:
+        data = _load_unlocked()
+        if "notified_fixture_ids" not in data:
+            data["notified_fixture_ids"] = []
+        if fixture_id not in data["notified_fixture_ids"]:
+            data["notified_fixture_ids"].append(fixture_id)
+            if len(data["notified_fixture_ids"]) > 1000:
+                data["notified_fixture_ids"] = data["notified_fixture_ids"][-1000:]
+        _save_unlocked(data)
+
+def is_fixture_notified(fixture_id):
+    with _db_lock:
+        data = _load_unlocked()
+        return fixture_id in data.get("notified_fixture_ids", [])
+
+def get_live_match_state(fixture_id):
+    with _db_lock:
+        data = _load_unlocked()
+        return data.get("live_match_states", {}).get(str(fixture_id))
+
+def set_live_match_state(fixture_id, state_dict):
+    with _db_lock:
+        data = _load_unlocked()
+        if "live_match_states" not in data:
+            data["live_match_states"] = {}
+        data["live_match_states"][str(fixture_id)] = state_dict
+        _save_unlocked(data)
+
+def remove_live_match_state(fixture_id):
+    with _db_lock:
+        data = _load_unlocked()
+        if "live_match_states" in data and str(fixture_id) in data["live_match_states"]:
+            del data["live_match_states"][str(fixture_id)]
+            _save_unlocked(data)
+
+# ---- QUEUE ----
 def add_queued_post(post_data):
     with _db_lock:
         data = _load_unlocked()
+        if "queued_posts" not in data:
+            data["queued_posts"] = []
         data["queued_posts"].append(post_data)
         _save_unlocked(data)
 
 def requeue_post(post_data):
-    """
-    Xatoga uchragan yoxud jo'natish xatolikka tushgan po'stni qayta o'qish uchun navbatning boshiga qo'shadi.
-    """
     with _db_lock:
         data = _load_unlocked()
+        if "queued_posts" not in data:
+            data["queued_posts"] = []
         data["queued_posts"].insert(0, post_data)
         _save_unlocked(data)
 
 def get_next_post():
     with _db_lock:
         data = _load_unlocked()
-        if data["queued_posts"]:
+        if data.get("queued_posts"):
             post = data["queued_posts"].pop(0)
             _save_unlocked(data)
             return post
         return None
+
+# ---- TRACKING ACTIVE HOURS ----
+def set_today_fixtures_times(times_list):
+    """Bugungi o'yinlarning boshlanish va tugash taxminiy UTC vaktlarini (timestamp) saqlaydi."""
+    with _db_lock:
+        data = _load_unlocked()
+        data["today_fixtures_times"] = times_list
+        _save_unlocked(data)
+
+def get_today_fixtures_times():
+    with _db_lock:
+        data = _load_unlocked()
+        return data.get("today_fixtures_times", [])
 
 def get_queued_count():
     with _db_lock:
