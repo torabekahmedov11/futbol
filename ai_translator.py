@@ -5,10 +5,11 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 _working_model_name = None
+_banned_models = []
 
 def get_working_model():
     global _working_model_name
-    if _working_model_name:
+    if _working_model_name and _working_model_name not in _banned_models:
         return _working_model_name
         
     try:
@@ -18,40 +19,65 @@ def get_working_model():
                 name = m.name.replace('models/', '')
                 available.append(name)
         
-        print(f"API kalitda mavjud modellar: {available}")
+        # print(f"API kalitda mavjud modellar: {available}")
         
         preferred = [
             'gemini-3.5-flash', 'gemini-3.1-flash', 'gemini-3-flash',
             'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash',
             'gemini-3.1-pro', 'gemini-3-pro', 'gemini-2.5-pro',
             'gemini-2.0-pro', 'gemini-1.5-pro', 'gemini-1.0-pro', 
-            'gemini-pro', 'gemini-pro-latest', 'gemini-flash-lite-latest'
+            'gemini-pro', 'gemini-pro-latest'
         ]
         
         for pref in preferred:
-            if pref in available:
+            if pref in available and pref not in _banned_models:
                 _working_model_name = pref
                 print(f"Tanlangan model: {pref}")
                 return pref
                 
-        # Agar ulardan hech biri bo'lmasa, eng standart 'flash' yoki 'pro' modelini qidiramiz
         for m in available:
-            if 'flash' in m or 'pro' in m:
-                # Maxsus tts, image, deep-research modellaridan qochamiz
+            if m not in _banned_models and ('flash' in m or 'pro' in m):
                 if not any(x in m for x in ['image', 'tts', 'deep-research', 'preview', 'customtools']):
                     _working_model_name = m
                     print(f"Zaxira sifatida tanlangan text model: {m}")
                     return m
                     
-        if available:
-            _working_model_name = available[0]
-            return available[0]
+        available_clean = [m for m in available if m not in _banned_models]
+        if available_clean:
+            _working_model_name = available_clean[0]
+            return available_clean[0]
             
     except Exception as e:
         print(f"Modellarni yuklashda xato (Fallback qo'llaniladi): {e}")
         
-    _working_model_name = 'gemini-1.5-flash'
+    if 'gemini-1.5-flash' not in _banned_models:
+        _working_model_name = 'gemini-1.5-flash'
     return _working_model_name
+
+def safe_generate_content(prompt):
+    global _working_model_name, _banned_models
+    max_retries = 4
+    
+    for _ in range(max_retries):
+        model_name = get_working_model()
+        if not model_name:
+            raise Exception("Hamma modellar bloklandi yoki limit tugadi!")
+            
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            return response
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in error_str or "quota" in error_str or "exhausted" in error_str:
+                print(f"[{model_name}] Limit tugadi! Zaxira modelga o'tilmoqda...")
+                _banned_models.append(model_name)
+                _working_model_name = None
+                continue
+            else:
+                raise e
+    
+    raise Exception("Maksimal urinishlar tugadi. Model limitlari tamom bo'ldi.")
 
 def translate_and_spice_up(text):
     if not GEMINI_API_KEY:
@@ -94,8 +120,7 @@ Olingan manba:
 {text}
 """
     try:
-        model = genai.GenerativeModel(get_working_model())
-        response = model.generate_content(prompt)
+        response = safe_generate_content(prompt)
         try:
             translated = response.text.strip()
             return translated
@@ -131,8 +156,7 @@ Shablon:
 ... (agar kerak bo'lsa)
 """
     try:
-        model = genai.GenerativeModel(get_working_model())
-        response = model.generate_content(prompt)
+        response = safe_generate_content(prompt)
         text = response.text.strip().replace('**', '').replace('*', '')
         return text
     except Exception as e:
@@ -143,10 +167,9 @@ def check_ai_status():
     if not GEMINI_API_KEY:
         return "XATO: API kalit kiritilmagan!"
     try:
-        model = genai.GenerativeModel(get_working_model())
-        response = model.generate_content("Just say 'OK'")
+        response = safe_generate_content("Just say 'OK'")
         if "OK" in response.text.upper():
-            return "NORMAL (Uzluksiz ishlamoqda)"
+            return f"NORMAL ({_working_model_name} faol)"
         else:
             return "OGOHLANTIRISH (Noto'g'ri javob)"
     except Exception as e:
