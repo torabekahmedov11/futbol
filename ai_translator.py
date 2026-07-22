@@ -9,6 +9,10 @@ _banned_models = []
 
 def get_working_model():
     global _working_model_name
+    from config import GEMINI_API_KEY
+    if GEMINI_API_KEY:
+        genai.configure(api_key=GEMINI_API_KEY)
+        
     if _working_model_name and _working_model_name not in _banned_models:
         return _working_model_name
         
@@ -56,6 +60,10 @@ def get_working_model():
 
 def safe_generate_content(prompt):
     global _working_model_name, _banned_models
+    import config
+    if config.GEMINI_API_KEY:
+        genai.configure(api_key=config.GEMINI_API_KEY)
+        
     max_retries = 15
     
     for _ in range(max_retries):
@@ -69,8 +77,8 @@ def safe_generate_content(prompt):
             return response
         except Exception as e:
             error_str = str(e).lower()
-            if "429" in error_str or "quota" in error_str or "exhausted" in error_str or "404" in error_str or "no longer available" in error_str or "403" in error_str:
-                print(f"[{model_name}] Ulanish rad etildi (Limit yoki 404)! Zaxira modelga o'tilmoqda... Xato: {str(e)[:50]}")
+            if any(x in error_str for x in ["429", "quota", "exhausted", "404", "no longer available", "403", "400", "invalid"]):
+                print(f"[{model_name}] Ulanish rad etildi! Zaxira modelga o'tilmoqda... Xato: {str(e)[:50]}")
                 _banned_models.append(model_name)
                 _working_model_name = None
                 continue
@@ -80,7 +88,8 @@ def safe_generate_content(prompt):
     raise Exception("Maksimal urinishlar tugadi. Model limitlari tamom bo'ldi.")
 
 def translate_and_spice_up(text):
-    if not GEMINI_API_KEY:
+    import config
+    if not config.GEMINI_API_KEY:
         return f"AI_ERROR: Gemini API kaliti yo'q. Asl matn:\n\n{text}"
     
     prompt = f"""
