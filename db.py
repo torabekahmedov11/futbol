@@ -205,4 +205,27 @@ def get_queued_count():
     with _db_lock:
         return len(_load_unlocked().get("queued_posts", []))
 
+def purge_stale_queued_posts(max_age_hours=6):
+    """6 soatdan eski yoki kechagi postlarni bazadan yo'qotib tashlaydi."""
+    import time
+    with _db_lock:
+        data = _load_unlocked()
+        queued = data.get("queued_posts", [])
+        if not queued:
+            return 0
+        now = time.time()
+        fresh_queued = []
+        purged_count = 0
+        for p in queued:
+            created_at = p.get('created_at', now)
+            if (now - created_at) <= (max_age_hours * 3600):
+                fresh_queued.append(p)
+            else:
+                purged_count += 1
+        if purged_count > 0:
+            data["queued_posts"] = fresh_queued
+            _save_unlocked(data)
+            print(f"🧹 Bazadan {purged_count} ta eski post tozalandi!")
+        return purged_count
+
 

@@ -110,23 +110,12 @@ def queue_yesterday_results(bot: telebot.TeleBot):
 
 def check_live_matches(bot: telebot.TeleBot):
     """
-    Kunning istalgan payti emas, faqat o'yin bo'layotgan aniq soatlardagina uyg'onib API so'raydi (Har 4 minutda ishga tushadi, limitni tejaydi).
-    Push-based tezkor yetkazib berish tizimi!
+    Tunda ham, kunduzi ham 24/7 ishlaydi. Jonli o'yin (Live) payti gollarni darhol uzatadi!
     """
-    times = db.get_today_fixtures_times()
-    if not times: return
-    
-    now = time.time()
-    # Aktiv o'yin bormi? (Boshlanishdan 5 minut oldindan to +3 soatgacha kuzatamiz)
-    is_active_window = any(start - 300 <= now <= start + 10800 for start in times)
-    
-    if not is_active_window:
-        return # Hozir uxlash vaqti, limit tejaladi.
-        
-    print(f"[{datetime.now()}] LIVE: Jonli o'yinlar hisobi tekshirilmoqda...")
     lives = api_football.get_live_scores()
     if not lives: return
     
+    print(f"[{datetime.now()}] LIVE: Jonli o'yinlar hisobi tekshirilmoqda ({len(lives)} ta o'yin)...")
     for l in lives:
         fixture_id = str(l['fixture']['id'])
         status = l['fixture']['status']['short']
@@ -135,7 +124,7 @@ def check_live_matches(bot: telebot.TeleBot):
         
         home_team = l['teams']['home']['name']
         away_team = l['teams']['away']['name']
-        logo = l['teams']['home']['logo'] # Gol urganni fonga chiqarish qilsa ham bo'ladi, generic holatda home logo ulanadi
+        logo = l['teams']['home']['logo']
         
         state = db.get_live_match_state(fixture_id)
         
@@ -156,7 +145,7 @@ def check_live_matches(bot: telebot.TeleBot):
             prev_away = state.get('away', 0)
             
             if curr_home > prev_home or curr_away > prev_away:
-                print(f"GOL! {home_team} {curr_home} - {curr_away} {away_team}")
+                print(f"⚽️ GOL! {home_team} {curr_home} - {curr_away} {away_team}")
                 db.set_live_match_state(fixture_id, {'home': curr_home, 'away': curr_away})
                 
                 # Qaysi jamoa gol urgan bo'lsa xabar tayyorlash
@@ -264,15 +253,24 @@ def send_morning_greeting(bot: telebot.TeleBot):
         print(f"Morning greeting xatosi: {e}")
 
 def process_queue_and_post(bot: telebot.TeleBot):
-    """Oldingi funksiya faqat kechikyotgan sekin postlar: RSS. Anons uchun"""
+    """Navbatdagi RSS postlarni uzatish (Har 40-70 minutda)"""
     if not TARGET_CHANNEL_ID: return
+    
+    # Tunda (23:00 - 07:00) oddiy RSS xabarlari navbatda turadi, obunachilarni bezovta qilmaslik uchun
+    current_hour = datetime.now().hour
+    if 23 <= current_hour or current_hour < 7:
+        print("🌙 Tungi vaqt: oddiy RSS xabarlari navbatda yig'ilmoqda (Ertalab 07:00 dan boshlab uzatiladi).")
+        return
+
+    # Eskirgan postlarni tozalash
+    db.purge_stale_queued_posts(max_age_hours=6)
+    
     post = db.get_next_post()
     if not post: return
         
-    # Post eskirganligini tekshirish (8 soatdan oshgan bo'lsa o'tkazib yuboriladi)
     created_at = post.get('created_at')
-    if created_at and (time.time() - created_at) > (8 * 3600):
-        print(f"⚠️ Post ({post.get('id', '')}) 8 soatdan eskirgani uchun tashlab yuborildi.")
+    if created_at and (time.time() - created_at) > (6 * 3600):
+        print(f"⚠️ Post ({post.get('id', '')}) 6 soatdan eskirgani uchun tashlab yuborildi.")
         return
 
     print(f"Jadvaldagi RSS postga ishlov berilmoqda ({post['id']})...")
@@ -306,14 +304,7 @@ def process_queue_and_post(bot: telebot.TeleBot):
         
         # Bazadagi rasm yo'qlarni tekshirib to'ldirish
         if not image_url:
-            import random
-            image_url = random.choice([
-                "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop",
-                "https://images.unsplash.com/photo-1518605368461-1e1c25143a41?q=80&w=800&auto=format&fit=crop",
-                "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=800&auto=format&fit=crop",
-                "https://images.unsplash.com/photo-1511886929837-354d827a426d?q=80&w=800&auto=format&fit=crop",
-                "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=800&auto=format&fit=crop"
-            ])
+            image_url = scraper.get_unique_fallback_image()
             
         safe_send_post(bot, TARGET_CHANNEL_ID, main_post, image_url=image_url, markup=markup)
             
@@ -328,9 +319,9 @@ def process_queue_and_post(bot: telebot.TeleBot):
 
 def setup_scheduler(bot: telebot.TeleBot):
     # Har 10 minutda sekkin fon xabarlarini bepul yig'ish (RSS)
-    scheduler.add_job(fetch_rss_news, trigger="interval", minutes=10)
+    scheduler.add_job(fetch_rss_news, trigger="interval", minutes=10, kwargs={"bot": bot})
     
-    # Kunning istalgan payti (har 4 minut) poller uyg'onib state ni ko'rib chiqadi va gollarni Bypass qiladi!
+    # 24/7 har 4 minutda jonli o'yinlarni kuzatish va gol postlarini tezkor uzatish
     scheduler.add_job(check_live_matches, trigger="interval", minutes=4, kwargs={"bot": bot})
     
     # Anons qismi
@@ -342,10 +333,8 @@ def setup_scheduler(bot: telebot.TeleBot):
     # Ertalabki greeting
     scheduler.add_job(send_morning_greeting, trigger="cron", hour=7, minute=0, kwargs={"bot": bot})
     
-    # Process old queue (Aynan kuniga 15 ta atrofida chiqishi uchun post kuttirish 85 minut)
-    scheduler.add_job(process_queue_and_post, trigger="interval", minutes=85, jitter=1500, kwargs={"bot": bot})
+    # Navbatdagi postlarni har 40 - 70 minut oralig'ida yuborish (55 minut ± 15 minut jitter)
+    scheduler.add_job(process_queue_and_post, trigger="interval", minutes=55, jitter=900, kwargs={"bot": bot})
     
-    # Restartdan so'ng 1 ta check qilib qo'yish
-    print("Gibrid (RSS + API) tizimi o'rnatildi!")
-    fetch_rss_news()
-
+    print("Gibrid (RSS + 24/7 API) tizimi o'rnatildi!")
+    fetch_rss_news(bot)
