@@ -21,10 +21,11 @@ def scrape_telegram_channel(rss_url, last_id):
         if not post_id:
             continue
             
+        post_time = time.time()
         if hasattr(entry, 'published_parsed') and entry.published_parsed:
             post_time = time.mktime(entry.published_parsed)
             now_time = time.time()
-            if (now_time - post_time) > (24 * 3600):
+            if (now_time - post_time) > (8 * 3600):  # Faqat oxirgi 8 soatdagi YANGI xabarlar
                 continue
         
         text = entry.get('title', '') + "\n\n"
@@ -58,11 +59,11 @@ def scrape_telegram_channel(rss_url, last_id):
             
         # Bo'sh qolsa zaxira rasm qo'yamiz (Katta va sifatli)
         fallbacks = [
-            "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop", # Stadion va koptok
-            "https://images.unsplash.com/photo-1518605368461-1e1c25143a41?q=80&w=800&auto=format&fit=crop", # O'yin maydoni
-            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=800&auto=format&fit=crop", # Tomoshabinlar
-            "https://images.unsplash.com/photo-1511886929837-354d827a426d?q=80&w=800&auto=format&fit=crop", # Koptok va darvoza
-            "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=800&auto=format&fit=crop" # Maydon chimi
+            "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1518605368461-1e1c25143a41?q=80&w=800&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=800&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1511886929837-354d827a426d?q=80&w=800&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=800&auto=format&fit=crop"
         ]
         if not image_url:
             image_url = random.choice(fallbacks)
@@ -89,7 +90,8 @@ def scrape_telegram_channel(rss_url, last_id):
             "text": text,
             "image": image_url,
             "video": None,
-            "type": "news"
+            "type": "news",
+            "created_at": post_time
         })
         
     return new_posts

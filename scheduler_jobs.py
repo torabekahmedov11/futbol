@@ -269,6 +269,12 @@ def process_queue_and_post(bot: telebot.TeleBot):
     post = db.get_next_post()
     if not post: return
         
+    # Post eskirganligini tekshirish (8 soatdan oshgan bo'lsa o'tkazib yuboriladi)
+    created_at = post.get('created_at')
+    if created_at and (time.time() - created_at) > (8 * 3600):
+        print(f"⚠️ Post ({post.get('id', '')}) 8 soatdan eskirgani uchun tashlab yuborildi.")
+        return
+
     print(f"Jadvaldagi RSS postga ishlov berilmoqda ({post['id']})...")
     translated_text = ai_translator.translate_and_spice_up(post['text'])
     

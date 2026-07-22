@@ -155,10 +155,12 @@ def get_api_status():
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         data = response.json()
-        if 'response' in data and 'account' in data['response'] and 'requests' in data['response']['subscription']:
-            # Wait, API structure might differ. Better robust dict getting
-            pass 
-        # v3 da response -> subscription -> active, requests -> current, limit_day
+        if data.get('errors'):
+            err_str = str(data['errors'])
+            if 'suspended' in err_str.lower():
+                return {"status": "SUSPENDED", "message": "Akkaunt to'xtatilgan/bloklangan (dashboard.api-football.com)!"}
+            return {"status": "ERROR", "message": err_str[:100]}
+            
         if 'response' in data and data.get('response'):
             subs = data['response'].get('subscription', {})
             req = int(data['response'].get('requests', {}).get('current', 0))
@@ -166,4 +168,4 @@ def get_api_status():
             return {"limit_day": limit_day, "current": req, "status": "OK"}
     except Exception as e:
         print(f"Status xato: {e}")
-    return {"status": "ERROR"}
+    return {"status": "ERROR", "message": "Ulanishda xato"}

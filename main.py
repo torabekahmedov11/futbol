@@ -63,7 +63,8 @@ def cmd_status(message):
         xulosa = "Yetmaydi (API kalit almashtiring)" if qoldiq < 15 else "Bugunga yetadi"
         limit_info = f"⚽️ API-Football: {curr}/{lim} band (Qoldiq: {qoldiq}), {xulosa}"
     else:
-        limit_info = "⚽️ API-Football: Ulanishda xato!"
+        err_msg = api_stat.get("message", "Ulanishda xato")
+        limit_info = f"⚽️ API-Football: {err_msg}"
 
     text = (
         "📈 **Bot Holati:**\n\n"
