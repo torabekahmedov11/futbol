@@ -173,6 +173,53 @@ def check_live_matches(bot: telebot.TeleBot):
                 translated = ai_translator.translate_and_spice_up(msg_json)
                 send_instant_post(bot, translated, logo)
 
+def safe_send_post(bot, channel_id, main_post, image_url=None, markup=None):
+    """
+    Telegram-ga xabar yuborishda barcha xatoliklarni xavfsiz ushlab qoluvchi va hal etuvchi helper:
+    1. Telegram send_photo liti (1024 belgi) oshganda rasm captionini qisqartirish yoki text-only ga fallback qilish
+    2. HTML parse xatolarida taglarni tozalab (clean HTML) qayta yuborish
+    3. Rasm yuklashda tarmoq/URL xatolarida oddiy text message yuborish
+    """
+    import re
+    clean_post = re.sub(r'<[^>]+>', '', main_post)
+    
+    # 1-Bosqich: Rasm bilan yuborishga urinib ko'ramiz
+    if image_url:
+        if len(main_post) <= 1024:
+            photo_caption = main_post
+            use_html = True
+        else:
+            photo_caption = clean_post[:1015] + "..."
+            use_html = False
+            
+        try:
+            bot.send_photo(channel_id, image_url, caption=photo_caption, parse_mode="HTML" if use_html else None, reply_markup=markup)
+            return True
+        except telebot.apihelper.ApiTelegramException as e:
+            err_str = str(e).lower()
+            if "parse entities" in err_str:
+                try:
+                    clean_cap = clean_post[:1015] + "..." if len(clean_post) > 1020 else clean_post
+                    bot.send_photo(channel_id, image_url, caption=clean_cap, reply_markup=markup)
+                    return True
+                except Exception as e2:
+                    print(f"Rasm bilan oddiy matn yuborishda ham xato: {e2}")
+            else:
+                print(f"Rasm yuborish API xatosi ({e}). Text message rejimiga o'tilmoqda...")
+        except Exception as e:
+            print(f"Rasm yuborish umumiy xatosi: {e}")
+
+    # 2-Bosqich: Text message sifatida yuborish (sendMessage max 4096 char limit)
+    try:
+        bot.send_message(channel_id, main_post, parse_mode="HTML", reply_markup=markup)
+        return True
+    except telebot.apihelper.ApiTelegramException as e:
+        if "parse entities" in str(e).lower():
+            bot.send_message(channel_id, clean_post, reply_markup=markup)
+            return True
+        else:
+            raise e
+
 def send_instant_post(bot, text, image_url):
     """GOL va Natijalarni Queue ga kiritmasdan o'sha soniyada (Push method) to'g'ri yuboradi!"""
     if not text or "[FILTERED]" in text: return
@@ -183,21 +230,7 @@ def send_instant_post(bot, text, image_url):
     main_post += slogan
     
     try:
-        if image_url:
-            bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=main_post, parse_mode="HTML")
-        else:
-            bot.send_message(TARGET_CHANNEL_ID, main_post, parse_mode="HTML")
-    except telebot.apihelper.ApiTelegramException as e:
-        if "parse entities" in str(e).lower():
-            import re
-            clean_post = re.sub(r'<[^>]+>', '', main_post)
-            if image_url:
-                bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=clean_post)
-            else:
-                bot.send_message(TARGET_CHANNEL_ID, clean_post)
-        else:
-            print(f"Tezkor xabar xatosi: {e}")
-            send_admin_error("send_instant_post", e)
+        safe_send_post(bot, TARGET_CHANNEL_ID, main_post, image_url)
     except Exception as e:
         print(f"Tezkor xabar xatosi: {e}")
         send_admin_error("send_instant_post", e)
@@ -226,13 +259,9 @@ def send_morning_greeting(bot: telebot.TeleBot):
         if url: markup.add(InlineKeyboardButton("👉 Batafsil o'qish", url=url))
             
     try:
-        bot.send_message(TARGET_CHANNEL_ID, main_post, parse_mode="HTML", reply_markup=markup if batafsil_post else None)
-    except telebot.apihelper.ApiTelegramException as e:
-        if "parse entities" in str(e).lower():
-            import re
-            clean_post = re.sub(r'<[^>]+>', '', main_post)
-            bot.send_message(TARGET_CHANNEL_ID, clean_post, reply_markup=markup if batafsil_post else None)
-    except: pass
+        safe_send_post(bot, TARGET_CHANNEL_ID, main_post, reply_markup=markup if batafsil_post else None)
+    except Exception as e:
+        print(f"Morning greeting xatosi: {e}")
 
 def process_queue_and_post(bot: telebot.TeleBot):
     """Oldingi funksiya faqat kechikyotgan sekin postlar: RSS. Anons uchun"""
@@ -280,26 +309,15 @@ def process_queue_and_post(bot: telebot.TeleBot):
                 "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=800&auto=format&fit=crop"
             ])
             
-        try:
-            if image_url:
-                bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=main_post, parse_mode="HTML", reply_markup=markup)
-            else:
-                bot.send_message(TARGET_CHANNEL_ID, main_post, parse_mode="HTML", reply_markup=markup)
-        except telebot.apihelper.ApiTelegramException as e:
-            if "parse entities" in str(e).lower():
-                import re
-                clean_post = re.sub(r'<[^>]+>', '', main_post)
-                if image_url:
-                    bot.send_photo(TARGET_CHANNEL_ID, image_url, caption=clean_post, reply_markup=markup)
-                else:
-                    bot.send_message(TARGET_CHANNEL_ID, clean_post, reply_markup=markup)
-            else:
-                raise e
+        safe_send_post(bot, TARGET_CHANNEL_ID, main_post, image_url=image_url, markup=markup)
             
         print(f"✅ RSS POST ketti (Qoldi: {db.get_queued_count()})")
     except Exception as e:
         post['retries'] = post.get('retries', 0) + 1
-        if post['retries'] <= 3: db.requeue_post(post)
+        if post['retries'] <= 3:
+            db.requeue_post(post)
+        else:
+            print(f"⚠️ Post {post.get('id')} 3 martadan ko'p muvaffaqiyatsiz bo'ldi, o'chirildi.")
         send_admin_error("process_queue_and_post", e)
 
 def setup_scheduler(bot: telebot.TeleBot):
