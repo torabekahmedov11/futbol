@@ -20,11 +20,15 @@ def send_admin_error(context, e):
         requests.post(url, data={"chat_id": ADMIN_ID, "text": f"⚠️ JADVAL XATOSI!\nJoy: {context}\nXato: {str(e)[:500]}"}, timeout=5)
     except: pass
 
-def fetch_rss_news():
+def fetch_rss_news(bot: telebot.TeleBot = None):
     """RSS orqali asosiy (fon) yangiliklarni yig'ish (Bema'lo bepul limit)"""
+    # 6 soatdan eski postlarni avtomatik o'chirish
+    db.purge_stale_queued_posts(max_age_hours=6)
+    
     donors = [
         "http://feeds.bbci.co.uk/sport/football/rss.xml",
-        "https://www.espn.com/espn/rss/soccer/news"
+        "https://www.espn.com/espn/rss/soccer/news",
+        "https://www.skysports.com/rss/12040"
     ]
     all_new_posts = []
     for donor in donors:
@@ -38,10 +42,19 @@ def fetch_rss_news():
             print(f"Skraping xatosi: {e}")
             send_admin_error("fetch_rss_news (Skraping)", e)
 
+    added_new = False
     for p in all_new_posts:
         if p.get("text"):
             db.add_queued_post(p)
             db.set_last_id(p["id"])
+            added_new = True
+
+    # Saytda yangi post chiqsa jadvalni kutmasdan darsxod joylash (kunduzi)
+    if added_new and bot:
+        current_hour = datetime.now().hour
+        if 7 <= current_hour < 23:
+            print("Saytda yangi post topildi! Darsxod kanalga joylanmoqda...")
+            process_queue_and_post(bot)
 
 def queue_morning_fixtures(bot: telebot.TeleBot, force=False):
     """Ertalabki o'yinlar taqvimi va vaqtlarini xotiraga yuklash va anons berish"""

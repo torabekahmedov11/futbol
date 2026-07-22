@@ -225,7 +225,7 @@ def purge_stale_queued_posts(max_age_hours=6):
         if purged_count > 0:
             data["queued_posts"] = fresh_queued
             _save_unlocked(data)
-            print(f"🧹 Bazadan {purged_count} ta eski post tozalandi!")
+            print(f"Bazadan {purged_count} ta eski post tozalandi!")
         return purged_count
 
 

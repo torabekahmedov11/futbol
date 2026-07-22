@@ -126,7 +126,9 @@ Olingan manba:
             return "[FILTERED]"
     except Exception as e:
         print(f"Gemini API Error: {e}")
-        return None
+        # AI ishlamay qolganda bot to'xtab qolmasligi uchun zaxira matn qaytarish
+        clean_text = text.replace('**', '').replace('*', '')
+        return f"[XABAR]\n⚽️ <b>Futbol Yangiliklari</b>\n\n{clean_text[:400]}...\n\n#futbol #yangiliklar"
 
 def generate_morning_lifehack():
     """Tongi xayrli tong po'sti uchun manbasiz generatsiya."""
