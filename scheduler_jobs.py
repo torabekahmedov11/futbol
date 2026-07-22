@@ -28,8 +28,25 @@ def fetch_rss_news(bot: telebot.TeleBot = None):
     donors = [
         "http://feeds.bbci.co.uk/sport/football/rss.xml",
         "https://www.espn.com/espn/rss/soccer/news",
-        "https://www.skysports.com/rss/12040"
+        "https://www.skysports.com/rss/12040/football",
+        "https://www.goal.com/feeds/en/news",
     ]
+    
+    # Faqat futbol kalit so'zlari (boshqa sport turlarini filtrlash uchun)
+    FOOTBALL_KEYWORDS = [
+        'football', 'soccer', 'futbol', 'goal', 'transfer', 'premier league',
+        'champions league', 'la liga', 'serie a', 'bundesliga', 'ligue 1',
+        'world cup', 'euro 202', 'copa', 'uefa', 'fifa', 'epl',
+        'manchester', 'barcelona', 'real madrid', 'liverpool', 'chelsea',
+        'arsenal', 'bayern', 'psg', 'juventus', 'inter', 'milan',
+        'penalty', 'red card', 'yellow card', 'hat-trick', 'hattrick',
+        'midfielder', 'striker', 'defender', 'goalkeeper', 'manager',
+        'signing', 'loan', 'contract', 'messi', 'ronaldo', 'mbappe',
+        'haaland', 'bellingham', 'vinicius', 'salah', 'de bruyne',
+        'match', 'fixture', 'lineup', 'squad', 'coach',
+        'o\'yin', 'terma', 'jamoa', 'liga', 'chempionat', 'kubogi',
+    ]
+    
     all_new_posts = []
     for donor in donors:
         try:
@@ -37,7 +54,13 @@ def fetch_rss_news(bot: telebot.TeleBot = None):
             if len(posts) > 15: posts = posts[-15:]
             for p in posts:
                 if not db.is_post_seen(p["id"]):
-                    all_new_posts.append(p)
+                    # Futbol emasligini filtrlash
+                    post_text = (p.get("text", "") + " " + p.get("id", "")).lower()
+                    is_football = any(kw in post_text for kw in FOOTBALL_KEYWORDS)
+                    if is_football:
+                        all_new_posts.append(p)
+                    else:
+                        db.set_last_id(p["id"])  # Ko'rilgan deb belgilash (qayta chiqmasligi uchun)
         except Exception as e:
             print(f"Skraping xatosi: {e}")
             send_admin_error("fetch_rss_news (Skraping)", e)
