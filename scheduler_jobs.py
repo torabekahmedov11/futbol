@@ -158,7 +158,7 @@ def check_live_matches(bot: telebot.TeleBot):
             prev_away = state.get('away', 0)
             
             if curr_home > prev_home or curr_away > prev_away:
-                print(f"⚽️ GOL! {home_team} {curr_home} - {curr_away} {away_team}")
+                print(f"GOL! {home_team} {curr_home} - {curr_away} {away_team}")
                 db.set_live_match_state(fixture_id, {'home': curr_home, 'away': curr_away})
                 
                 # Qaysi jamoa gol urgan bo'lsa xabar tayyorlash
@@ -272,7 +272,7 @@ def process_queue_and_post(bot: telebot.TeleBot):
     # Tunda (23:00 - 07:00) oddiy RSS xabarlari navbatda turadi, obunachilarni bezovta qilmaslik uchun
     current_hour = datetime.now().hour
     if 23 <= current_hour or current_hour < 7:
-        print("🌙 Tungi vaqt: oddiy RSS xabarlari navbatda yig'ilmoqda (Ertalab 07:00 dan boshlab uzatiladi).")
+        print("Tungi vaqt: oddiy RSS xabarlari navbatda yig'ilmoqda (Ertalab 07:00 dan boshlab uzatiladi).")
         return
 
     # Eskirgan postlarni tozalash
@@ -283,7 +283,7 @@ def process_queue_and_post(bot: telebot.TeleBot):
         
     created_at = post.get('created_at')
     if created_at and (time.time() - created_at) > (6 * 3600):
-        print(f"⚠️ Post ({post.get('id', '')}) 6 soatdan eskirgani uchun tashlab yuborildi.")
+        print(f"Post ({post.get('id', '')}) 6 soatdan eskirgani uchun tashlab yuborildi.")
         return
 
     print(f"Jadvaldagi RSS postga ishlov berilmoqda ({post['id']})...")
@@ -321,13 +321,13 @@ def process_queue_and_post(bot: telebot.TeleBot):
             
         safe_send_post(bot, TARGET_CHANNEL_ID, main_post, image_url=image_url, markup=markup)
             
-        print(f"✅ RSS POST ketti (Qoldi: {db.get_queued_count()})")
+        print(f"RSS POST ketti (Qoldi: {db.get_queued_count()})")
     except Exception as e:
         post['retries'] = post.get('retries', 0) + 1
         if post['retries'] <= 3:
             db.requeue_post(post)
         else:
-            print(f"⚠️ Post {post.get('id')} 3 martadan ko'p muvaffaqiyatsiz bo'ldi, o'chirildi.")
+            print(f"Post {post.get('id')} 3 martadan ko'p muvaffaqiyatsiz bo'ldi, o'chirildi.")
         send_admin_error("process_queue_and_post", e)
 
 def setup_scheduler(bot: telebot.TeleBot):

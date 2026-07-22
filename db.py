@@ -31,7 +31,7 @@ def init_db():
                                 data = json.loads(raw_text)
                                 with open(DB_FILE, 'w', encoding='utf-8') as f:
                                     json.dump(data, f, ensure_ascii=False, indent=4)
-                                print("✅ Onlayn xotiradan (Cloud) Database muvaffaqiyatli TIKLANDI!")
+                                print("[OK] Onlayn xotiradan (Cloud) Database muvaffaqiyatli TIKLANDI!")
                                 return
                     except Exception as parse_e:
                         print(f"Parse error: {parse_e}")
