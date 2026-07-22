@@ -220,14 +220,14 @@ def safe_send_post(bot, channel_id, main_post, image_url=None, markup=None):
         else:
             raise e
 
+FOOTER_TEXT = "\n\n🔥 <b>O'zbekistondagi eng tezkor futbol yangiliklari:</b> @matchtv_livee"
+
 def send_instant_post(bot, text, image_url):
     """GOL va Natijalarni Queue ga kiritmasdan o'sha soniyada (Push method) to'g'ri yuboradi!"""
     if not text or "[FILTERED]" in text: return
     text = text.replace('**', '').replace('*', '')
     main_post, batafsil_post = parse_telegraph_response(text)
-    
-    slogan = f"\n\n⚽️ @matchtv_livee"
-    main_post += slogan
+    main_post += FOOTER_TEXT
     
     try:
         safe_send_post(bot, TARGET_CHANNEL_ID, main_post, image_url)
@@ -251,7 +251,7 @@ def send_morning_greeting(bot: telebot.TeleBot):
     text = ai_translator.generate_morning_lifehack()
     if not text: return
     main_post, batafsil_post = parse_telegraph_response(text)
-    main_post += f"\n\n⚽️ @matchtv_livee"
+    main_post += FOOTER_TEXT
     
     markup = InlineKeyboardMarkup()
     if batafsil_post:
@@ -286,7 +286,7 @@ def process_queue_and_post(bot: telebot.TeleBot):
     if "[FILTERED]" in translated_text: return
     translated_text = translated_text.replace('**', '').replace('*', '')
     main_post, batafsil_post = parse_telegraph_response(translated_text)
-    main_post += f"\n\n👉 Obuna bo'ling: @matchtv_livee"
+    main_post += FOOTER_TEXT
 
     try:
         markup = None

@@ -84,34 +84,34 @@ def translate_and_spice_up(text):
         return f"AI_ERROR: Gemini API kaliti yo'q. Asl matn:\n\n{text}"
     
     prompt = f"""
-Siz "O'zbekistondagi eng qaynoq va virusli yevropa futboli" haqidagi Telegram kanalining professional sharhlovchisi va bosh muharririsiz. Ma'lumot:
-Ingliz tilidagi maqola (RSS) yoki API-Football xabari (JSON). Ushbu kontentni inson tilida, xuddi qalin do'stingizga o'zbek tilida qiziqarli gapirib berayotgandek jonli, emotsional Postga aylantiring.
+Siz Telegramdagi "Match TV Live" Yevropa futboli kanalining professional, emotsional va savodli sport sharhlovchisisiz.
+Berilgan inglizcha yangilik (RSS) yoki API-Football ma'lumotini o'zbek tiliga tushunarli, qiziqarli va professional jurnalistik uslubda o'giring.
 
-Qat'iy Qoidalar (Xavfsizlik va Filtar - O'ta Muhim!):
-1. MATIN XAVFSIZLIGI: Hech qachon birovni haqorat qiladigan, 18+ mazmundagi, diniy (yoki islom diniga zid), siyosiy, millatchilikka xos, qimor (betting) reklamasi yoki O'zbekiston qonunlariga zid har qanday axborotni tarjima qilmang va yozmang. Bunday holatda faqat "[FILTERED]" deb javob qaytaring.
-2. ANIQ FAKTLAR: Faqat berilgan manba matnidagi YANGI va ANIQ faktlarga tayaning. O'zingizdan eskirgan voqealar, to'qima natijalar yoki manbada bo'lmagan xabarlarni qo'shmang!
+Qat'iy Qoidalar:
+1. FAQT VA ANIQ MATN: Faqat va faqat manba matnida berilgan REAL faktlarga tayaning. O'zingizdan uydirma voqea, eskirgan faktlar yoki manbada bo'lmagan natijalarni to'qimang.
+2. USLUB (MUHIM): "Og'ayni", "do'stim", "daxshatni qara", "og'ayni qara" kabi bachkana yoki ko'cha jargon so'zlarini UMUMAN ISHLATMANG! Professional, hayajonli va savodli til ishlating. "⏱ O'qish vaqti" degan ortiqcha qatorlarni yozmang.
+3. KANAL SHIORI VA LINKLAR: Javobingizga kanal linki (@matchtv_livee) yoki obuna bo'ling degan shiorlarni UMUMAN QO'SHMANG! (Bu avtomatik qo'shiladi).
+4. XAVFSIZLIK: 18+, buzg'unchilik, siyosiy, bet/qimor reklamalarini tarjima qilmang. Bunday bo'lsa faqat "[FILTERED]" deb javob bering.
 
-Formatlash va Qismlarga Ajratish Qoidalari:
-3. QISQA VA UZUN POSTLAR: Avval kelgan matn hajmini o'lchang. Bizda [XABAR] va [BATAFSIL] qismlari bor.
-   - AGAR POST QISQA bo'lsa (taxminan yozganingizda 150-180 so'zdan oshmasa), hamma gapni MAJBURIY faqat [XABAR] bloki ichiga yozing! [BATAFSIL] degan blokni UMUMAN yaratmang (bu qoidani buzmang, preview keraksiz!).
-   - AGAR POST UZUN va JIDDIY bo'lsa, qiziqtiruvchi ta'rifni [XABAR] qismiga va to'liq uzun davomini [BATAFSIL] qismiga bo'lib yozing.
-4. KANAL YUZI [XABAR] qismi:
-   - "🚨 Bugungi o'yinlar" (anons bo'lsa) yoxud "⚽️ GOOOOOL!!!" (gol bo'lsa), yoki "🏁 O'YIN TUGADI!" (natija bo'lsa) maxsus emotsional SARLAVHA qo'ying. HTML teglari (<b>...</b>) ishlating.
-   - Sarlavha tagiga <i>⏱ O'qish vaqti: 1 daqiqa</i> deb qo'ying.
-5. HASHTAGLAR VA SHIOR:
-   - [XABAR] ning eng oxiriga yoki matn so'nggiga doim ANIQLIK BILAN mavzuga oid 12 ta xeshteg (M: #futbol #championsleague #realmadrid) joylang. Undan so'ng yana bitta bo'sh joy tashlab, kanal shiorini yozing: "🔥 <b>O'zbekistondagi eng tezkor futbol yangiliklari:</b> @matchtv_livee".
-6. Hech qachon markdown yulduzcha (*) ishlatmang, faqat HTML (<b> <i>) ishlating.
+Formatlash Qoidalari:
+5. QISQA VA UZUN POSTLAR:
+   - AGAR POST QISQA bo'lsa (150-180 so'zdan oshmasa), hamma gapni MAJBURIY faqat [XABAR] bloki ichiga yozing! [BATAFSIL] degan blokni UMUMAN yaratmang!
+   - AGAR POST UZUN va JIDDIY bo'lsa, qiziqtiruvchi ta'rifni [XABAR] qismiga va to'liq davomini [BATAFSIL] qismiga bo'lib yozing.
+6. SARLAVHA VA HASHTAGLAR:
+   - Sarlavhani emotsional qiling: "🚨 REAL MADRIDDA YANGILIK!" yoki "⚽️ GOOOOOL!" yoki "🏁 O'YIN TUGADI!". HTML (<b>...</b>) ishlating.
+   - [XABAR] matni oxiriga mavzuga oid 8-10 ta xeshteg joylang (M: #futbol #realmadrid #championsleague).
+7. Faqat HTML (<b>, <i>) ishlating. Markdown (*) ishlatmang.
 
-Sizning javobingiz strukturasi (Agar qisqa bo'lsa [BATAFSIL] bloki bo'lmaydi!!):
+Sizning javobingiz strukturasi (Qisqa bo'lsa [BATAFSIL] bo'lmaydi!):
 [XABAR]
-(SARLAVHA)
-(O'qish vaqti)
-(Asosiy matn...)
-(Xeshteglar)
-(Shior va havola)
+<b>(SARLAVHA)</b>
+
+(Asosiy yangilik matni...)
+
+(Hashtaglar)
 
 [BATAFSIL]
-(Faqatgina ma'lumot uzun va katta bo'lsagina shu yerga davomini yozing, yo'qsa bu blokni bo'sh qoldiring yoki umuman yaratmang!)
+(Faqatgina ma'lumot juda uzun bo'lsagina shu yerga davomini yozing, yo'qsa bu blokni umuman yaratmang!)
 
 Olingan manba:
 {text}
@@ -129,28 +129,26 @@ Olingan manba:
         return None
 
 def generate_morning_lifehack():
-    """Tongi xayrli tong po'sti uchun manbasiz generatsiya (AI o'zi o'ylaydi)."""
+    """Tongi xayrli tong po'sti uchun manbasiz generatsiya."""
     if not GEMINI_API_KEY:
         return None
     
     prompt = """
-Siz Telegramdagi "Futbol yulduzlari va faktlari" kanalining samimiy va do'stona adminisiz.
-QAT'IY OGOXNATIRISH: 18+, buzg'unchilik, agressiv siyosiy, bet or qimor va O'zbekiston hududida yot (jinoyat) bo'lgan axborot yaratish taqiqlanadi. Faqat sof futbolga doir fakt toping.
+Siz Telegramdagi "Match TV Live" futbol kanalining savodli va samimiy adminisiz.
 
-Qator Qoidalar:
-1. Roppa-rosa ertalab soat 07:00 uchun bitta bomba, mashhur futbol fojiasi yoxud yutug'i, qiziqarli statistika yoki O'zbek futbol maktabi shonli pallalari haqidagi MA'LUM FAKTNI generatsiya qiling (yolg'on yoki asossiz voqea to'qimang).
-2. [XABAR] va [BATAFSIL] degan ikki qismga bo'lish (majburiy emas, ammo fakt uzun bo'lsa ajrating). Boshida Salomlashish, masalan "Xayrli tong, futbol shaydoyilari!".
-3. [XABAR] tagida 12 ta xeshteg yoxud kichkina P.S. munosabatini ilova qiling.
-4. Kanal shiori bilan yakunlang: "🔥 <b>O'zbekistondagi eng tezkor futbol yangiliklari:</b> @matchtv_livee"
-5. Yulduzchalar yo'q, faqat <b> va <i> HTML ishlating.
+Qat'iy Qoidalar:
+1. Ertalab soat 07:00 uchun futbol olamidagi mashhur va QIZIQARLI FAKT, burilish nuqtasi yoki statistika haqida samimiy post tayyorlang (yolg'on fakt to'qimang).
+2. "Og'ayni", "do'stim" kabi so'zlarni ishlatmang. Professional va samimiy so'rashish: "Xayrli tong, futbol muxlislari!".
+3. Javobingizga kanal linki yoki shiorlarni QO'SHMANG!
+4. Yulduzchalar yo'q, faqat <b> va <i> HTML ishlating.
 
 Shablon:
 [XABAR]
-...
-(hashtags)
-(slogan)
-[BATAFSIL]
-... (agar kerak bo'lsa)
+<b>Xayrli tong, futbol muxlislari! ⚽️</b>
+
+(Fakt matni...)
+
+(Hashtaglar)
 """
     try:
         response = safe_generate_content(prompt)
